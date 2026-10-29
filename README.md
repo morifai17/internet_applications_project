@@ -1,6 +1,6 @@
 # NovaCart API
 
-Backend for the NovaCart store: a versioned REST API (Laravel 13, PHP 8.5, PostgreSQL) with
+Backend for the NovaCart store: a REST API (Laravel 13, PHP 8.5, PostgreSQL) with
 four modules: **users**, **products**, **orders** and **notifications**.
 
 ## Run with Docker
@@ -9,7 +9,7 @@ four modules: **users**, **products**, **orders** and **notifications**.
 docker compose up -d --build
 ```
 
-The API is then served at `http://localhost:8080/api/v1` (`GET /up` is the health check).
+The API is then served at `http://localhost:8080/api` (`GET /up` is the health check).
 On start the container migrates and seeds the database (categories, sample products and an
 administrator).
 
@@ -35,7 +35,7 @@ into Postman (set `baseUrl` and `adminPassword`), or run it from the command lin
 
 ```bash
 npx newman run docs/api/NovaCart.postman_collection.json \
-  --env-var baseUrl=http://localhost:8080/api/v1 --env-var adminPassword='...'
+  --env-var baseUrl=http://localhost:8080/api --env-var adminPassword='...'
 ```
 
 The **Security proofs** folder checks that every unauthorized request is rejected.
@@ -70,7 +70,7 @@ Every error, from validation to authorization to server failures, has the same s
 | 422 | `validation_failed` / `unprocessable` | Invalid input / business rule (empty cart, invalid status change) |
 | 429 | `too_many_requests` | Rate limit exceeded |
 
-## Endpoints (`/api/v1`)
+## Endpoints (`/api`)
 
 | Method | Path | Access |
 |---|---|---|

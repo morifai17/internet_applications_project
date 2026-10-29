@@ -14,7 +14,7 @@ class NovaCartWorkflowTest extends TestCase
     public function test_complete_novacart_user_journey(): void
     {
         // 1. تسجيل زبون جديد مع مسافات في حقل username
-        $registerResponse = $this->postJson('/api/v1/register', [
+        $registerResponse = $this->postJson('/api/register', [
             'username' => 'Mohammed Alrifai',
             'email' => 'mohammed@novacart.com',
             'password' => 'Password123!',
@@ -25,7 +25,7 @@ class NovaCartWorkflowTest extends TestCase
             ->assertJsonStructure(['message', 'token', 'data']);
 
         // 2. تسجيل الدخول والحصول على الـ Bearer Token
-        $loginResponse = $this->postJson('/api/v1/login', [
+        $loginResponse = $this->postJson('/api/login', [
             'email' => 'mohammed@novacart.com',
             'password' => 'Password123!',
         ]);
@@ -37,7 +37,7 @@ class NovaCartWorkflowTest extends TestCase
 
         // 3. التحقق من مسار جلب البيانات الشخصية المباشر (/api/me) باستخدام الـ Token
         $meResponse = $this->withHeader('Authorization', 'Bearer '.$token)
-            ->getJson('/api/v1/me');
+            ->getJson('/api/me');
 
         $meResponse->assertStatus(200)
             ->assertJsonPath('data.email', 'mohammed@novacart.com');
@@ -53,12 +53,12 @@ class NovaCartWorkflowTest extends TestCase
         ]);
 
         // 5. اختبار تصفح المنتجات في المتجر الرئيسي (/api)
-        $shopResponse = $this->getJson('/api/v1');
+        $shopResponse = $this->getJson('/api');
         $shopResponse->assertStatus(200)
             ->assertJsonFragment(['title' => 'Gaming Laptop']);
 
         // 6. اختبار عرض تفاصيل منتج معين (/api/products/{product})
-        $productShowResponse = $this->getJson('/api/v1/products/'.$product->id);
+        $productShowResponse = $this->getJson('/api/products/'.$product->id);
         $productShowResponse->assertStatus(200)
             ->assertJsonFragment(['id' => $product->id]);
     }

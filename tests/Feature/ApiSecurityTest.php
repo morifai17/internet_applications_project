@@ -16,12 +16,11 @@ final class ApiSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_api_routes_are_versioned(): void
+    public function test_api_routes_are_served_under_the_api_prefix(): void
     {
-        $this->assertSame('/api/v1', parse_url(route('api.home'), PHP_URL_PATH));
+        $this->assertSame('/api', parse_url(route('api.home'), PHP_URL_PATH));
 
-        $this->getJson('/api/v1')->assertOk();
-        $this->getJson('/api/products/1')->assertNotFound();
+        $this->getJson('/api')->assertOk();
     }
 
     public function test_customer_cannot_view_another_customers_order(): void

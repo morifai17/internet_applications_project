@@ -1,13 +1,13 @@
 {
   "info": {
-    "name": "NovaCart API v1",
+    "name": "NovaCart API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": "REST API for the NovaCart store.\n\nRun **Auth → Register customer** (or Login customer) and **Auth → Login admin** first; the test scripts store the JWTs in collection variables. Then run any folder, or the whole **Security proofs** folder to see unauthorized access being rejected.\n\nEvery error uses the same shape: `{status, code, message, errors?}`."
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080/api/v1"
+      "value": "http://localhost:8080/api"
     },
     {
       "key": "customerEmail",
