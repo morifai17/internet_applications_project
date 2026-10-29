@@ -7,19 +7,16 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Shopping cart. Signed-in users (session or API token) keep their cart in the
- * database; guests on the web routes keep it in the session until they sign
- * in. Only product ids and quantities are stored; prices are always read from
- * the database.
+ * The signed-in customer's shopping cart, stored in the database. Only product
+ * ids and quantities are stored; prices are always read from the database.
  */
 final class CartService
 {
-    private const string SESSION_KEY = 'cart';
-
     public function __construct(private readonly Request $request) {}
 
     /**
@@ -29,11 +26,7 @@ final class CartService
      */
     public function raw(): array
     {
-        $user = $this->owner();
-
-        return $user !== null
-            ? $this->readDatabase($user)
-            : $this->normalize($this->request->session()->get(self::SESSION_KEY, []));
+        return $this->readDatabase($this->owner());
     }
 
     /**
@@ -149,51 +142,23 @@ final class CartService
     {
         $user = $this->owner();
 
-        if ($user !== null) {
-            CartItem::query()
-                ->whereHas('cart', fn ($query) => $query->where('user_id', $user->id))
-                ->delete();
-
-            return;
-        }
-
-        $this->request->session()->forget(self::SESSION_KEY);
+        CartItem::query()
+            ->whereHas('cart', fn ($query) => $query->where('user_id', $user->id))
+            ->delete();
     }
 
     /**
-     * Move the guest's session cart into the user's stored cart after they
-     * sign in. Quantities are merged and capped at the available stock.
+     * The cart routes require authentication, so a missing user is a 401.
      */
-    public function absorbGuestCart(User $user): void
-    {
-        $guestCart = $this->normalize($this->request->session()->pull(self::SESSION_KEY, []));
-
-        if ($guestCart === []) {
-            return;
-        }
-
-        $cart = $this->readDatabase($user);
-
-        $stock = Product::query()
-            ->whereIn('id', array_keys($guestCart))
-            ->pluck('stock_quantity', 'id');
-
-        foreach ($guestCart as $productId => $quantity) {
-            if (! $stock->has($productId)) {
-                continue;
-            }
-
-            $cart[$productId] = min(($cart[$productId] ?? 0) + $quantity, (int) $stock->get($productId));
-        }
-
-        $this->writeDatabase($user, array_filter($cart, fn (int $quantity): bool => $quantity > 0));
-    }
-
-    private function owner(): ?User
+    private function owner(): User
     {
         $user = $this->request->user();
 
-        return $user instanceof User ? $user : null;
+        if (! $user instanceof User) {
+            throw new AuthenticationException;
+        }
+
+        return $user;
     }
 
     /**
@@ -207,15 +172,7 @@ final class CartService
             return;
         }
 
-        $user = $this->owner();
-
-        if ($user !== null) {
-            $this->writeDatabase($user, $cart);
-
-            return;
-        }
-
-        $this->request->session()->put(self::SESSION_KEY, $cart);
+        $this->writeDatabase($this->owner(), $cart);
     }
 
     /**

@@ -128,7 +128,7 @@ final class OrderCancellationTest extends TestCase
             ->create(['quantity' => $quantity]);
 
         $this->actingAs($customer)
-            ->postJson(route('checkout.store'))
+            ->postJson(route('orders.store'))
             ->assertCreated();
 
         return Order::query()->latest('id')->firstOrFail();

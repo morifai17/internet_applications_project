@@ -31,7 +31,7 @@ final class NotificationTest extends TestCase
             ->create(['quantity' => 1]);
 
         $this->actingAs($customer, 'api')
-            ->postJson(route('api.orders.store'))
+            ->postJson(route('orders.store'))
             ->assertCreated();
 
         Notification::assertSentTo($customer, OrderPlaced::class);
@@ -45,12 +45,12 @@ final class NotificationTest extends TestCase
         $order = Order::factory()->create();
 
         $this->actingAs($admin, 'api')
-            ->patchJson(route('api.admin.orders.status', $order), ['status' => 'completed'])
+            ->patchJson(route('admin.orders.status', $order), ['status' => 'completed'])
             ->assertOk();
 
         // Re-submitting the current status is a no-op and must not notify again.
         $this->actingAs($admin, 'api')
-            ->patchJson(route('api.admin.orders.status', $order), ['status' => 'completed'])
+            ->patchJson(route('admin.orders.status', $order), ['status' => 'completed'])
             ->assertOk();
 
         $notifications = $order->user->notifications;
@@ -70,7 +70,7 @@ final class NotificationTest extends TestCase
         $other->notify(new OrderPlaced(Order::factory()->for($other)->create()));
 
         $this->actingAs($customer, 'api')
-            ->getJson(route('api.notifications.index'))
+            ->getJson(route('notifications.index'))
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.type', 'order_placed')
@@ -84,7 +84,7 @@ final class NotificationTest extends TestCase
         $notification = $owner->notifications()->firstOrFail();
 
         $this->actingAs(User::factory()->create(), 'api')
-            ->patchJson(route('api.notifications.read', $notification->id))
+            ->patchJson(route('notifications.read', $notification->id))
             ->assertNotFound();
 
         $this->assertNull($notification->fresh()->read_at);
@@ -98,18 +98,18 @@ final class NotificationTest extends TestCase
         $first = $customer->notifications()->firstOrFail();
 
         $this->actingAs($customer, 'api')
-            ->patchJson(route('api.notifications.read', $first->id))
+            ->patchJson(route('notifications.read', $first->id))
             ->assertOk()
             ->assertJsonPath('data.id', $first->id);
 
         $this->actingAs($customer, 'api')
-            ->getJson(route('api.notifications.index', ['unread' => 1]))
+            ->getJson(route('notifications.index', ['unread' => 1]))
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('meta.unread_count', 1);
 
         $this->actingAs($customer, 'api')
-            ->postJson(route('api.notifications.read-all'))
+            ->postJson(route('notifications.read-all'))
             ->assertOk();
 
         $this->assertSame(0, $customer->unreadNotifications()->count());

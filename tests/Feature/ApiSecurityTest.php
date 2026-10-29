@@ -16,11 +16,12 @@ final class ApiSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_api_routes_are_served_under_the_api_prefix(): void
+    public function test_api_routes_are_versioned(): void
     {
-        $this->assertSame('/api', parse_url(route('api.home'), PHP_URL_PATH));
+        $this->assertSame('/api/v1', parse_url(route('home'), PHP_URL_PATH));
 
-        $this->getJson('/api')->assertOk();
+        $this->getJson('/api/v1')->assertOk();
+        $this->getJson('/orders')->assertNotFound();
     }
 
     public function test_customer_cannot_view_another_customers_order(): void
@@ -29,7 +30,7 @@ final class ApiSecurityTest extends TestCase
         $intruder = User::factory()->create();
 
         $this->withToken(JWTAuth::fromUser($intruder))
-            ->getJson(route('api.orders.show', $order))
+            ->getJson(route('orders.show', $order))
             ->assertForbidden()
             ->assertExactJson([
                 'status' => 403,
@@ -45,7 +46,7 @@ final class ApiSecurityTest extends TestCase
         Order::factory()->count(2)->create();
 
         $this->withToken(JWTAuth::fromUser($customer))
-            ->getJson(route('api.orders.index'))
+            ->getJson(route('orders.index'))
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $own->id);
@@ -57,7 +58,7 @@ final class ApiSecurityTest extends TestCase
         $order = Order::factory()->for($customer)->create();
 
         $this->withToken(JWTAuth::fromUser($customer))
-            ->patchJson(route('api.admin.orders.status', $order), ['status' => 'completed'])
+            ->patchJson(route('admin.orders.status', $order), ['status' => 'completed'])
             ->assertForbidden()
             ->assertJsonPath('code', 'forbidden');
 
@@ -69,7 +70,7 @@ final class ApiSecurityTest extends TestCase
         $customer = User::factory()->create();
 
         $this->withToken(JWTAuth::fromUser($customer))
-            ->postJson(route('api.admin.products.store'), [
+            ->postJson(route('admin.products.store'), [
                 'title' => 'Not allowed',
                 'description' => 'Customers cannot add products.',
                 'price' => '1.00',
@@ -87,19 +88,19 @@ final class ApiSecurityTest extends TestCase
         $order = Order::factory()->create();
 
         $this->withToken(JWTAuth::fromUser($admin))
-            ->patchJson(route('api.admin.orders.status', $order), ['status' => 'completed'])
+            ->patchJson(route('admin.orders.status', $order), ['status' => 'completed'])
             ->assertOk()
             ->assertJsonPath('data.status', 'completed');
     }
 
     public function test_requests_without_a_valid_token_are_rejected(): void
     {
-        $this->getJson(route('api.orders.index'))
+        $this->getJson(route('orders.index'))
             ->assertUnauthorized()
             ->assertJsonPath('code', 'unauthenticated');
 
         $this->withToken('not.a.valid-token')
-            ->getJson(route('api.orders.index'))
+            ->getJson(route('orders.index'))
             ->assertUnauthorized();
     }
 
@@ -110,7 +111,7 @@ final class ApiSecurityTest extends TestCase
         $this->travel(config('jwt.ttl') + 1)->minutes();
 
         $this->withToken($token)
-            ->getJson(route('api.me'))
+            ->getJson(route('me'))
             ->assertUnauthorized();
     }
 
@@ -118,7 +119,7 @@ final class ApiSecurityTest extends TestCase
     {
         $customer = User::factory()->create(['password' => 'StrongPass123!']);
 
-        $this->postJson(route('api.login'), [
+        $this->postJson(route('login'), [
             'email' => $customer->email,
             'password' => 'StrongPass123!',
         ])
@@ -133,7 +134,7 @@ final class ApiSecurityTest extends TestCase
         $oldToken = JWTAuth::fromUser($customer);
 
         $newToken = $this->withToken($oldToken)
-            ->postJson(route('api.refresh'))
+            ->postJson(route('refresh'))
             ->assertOk()
             ->json('token');
 
@@ -142,13 +143,13 @@ final class ApiSecurityTest extends TestCase
         $this->startNewRequestCycle();
 
         $this->withToken($oldToken)
-            ->getJson(route('api.me'))
+            ->getJson(route('me'))
             ->assertUnauthorized();
 
         $this->startNewRequestCycle();
 
         $this->withToken($newToken)
-            ->getJson(route('api.me'))
+            ->getJson(route('me'))
             ->assertOk()
             ->assertJsonPath('data.id', $customer->id);
     }
@@ -156,14 +157,14 @@ final class ApiSecurityTest extends TestCase
     public function test_refreshing_an_invalid_token_is_rejected(): void
     {
         $this->withToken('not.a.valid-token')
-            ->postJson(route('api.refresh'))
+            ->postJson(route('refresh'))
             ->assertUnauthorized()
             ->assertJsonPath('code', 'unauthenticated');
     }
 
     public function test_sign_in_is_rate_limited_per_account(): void
     {
-        $attempt = fn (string $email) => $this->postJson(route('api.login'), [
+        $attempt = fn (string $email) => $this->postJson(route('login'), [
             'email' => $email,
             'password' => 'wrong-password',
         ]);
@@ -182,7 +183,7 @@ final class ApiSecurityTest extends TestCase
 
     public function test_responses_carry_security_headers(): void
     {
-        $this->getJson(route('api.home'))
+        $this->getJson(route('home'))
             ->assertOk()
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('X-Frame-Options', 'DENY')
@@ -192,7 +193,7 @@ final class ApiSecurityTest extends TestCase
 
     public function test_errors_share_one_format(): void
     {
-        $this->getJson(route('api.products.show', 999999))
+        $this->getJson(route('products.show', 999999))
             ->assertNotFound()
             ->assertExactJson([
                 'status' => 404,
@@ -200,7 +201,7 @@ final class ApiSecurityTest extends TestCase
                 'message' => 'The requested resource was not found.',
             ]);
 
-        $this->postJson(route('api.register'), [])
+        $this->postJson(route('register'), [])
             ->assertUnprocessable()
             ->assertJsonPath('status', 422)
             ->assertJsonPath('code', 'validation_failed')
@@ -215,7 +216,7 @@ final class ApiSecurityTest extends TestCase
         $product->update(['stock_quantity' => 0]);
 
         $this->withToken(JWTAuth::fromUser($customer))
-            ->postJson(route('api.orders.store'))
+            ->postJson(route('orders.store'))
             ->assertConflict()
             ->assertJsonPath('status', 409)
             ->assertJsonPath('code', 'conflict')

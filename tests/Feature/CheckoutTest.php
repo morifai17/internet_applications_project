@@ -26,7 +26,7 @@ final class CheckoutTest extends TestCase
             ->assertJsonPath('data.item_count', 2);
 
         // Client supplied amounts must be ignored; the server recomputes.
-        $response = $this->postJson(route('checkout.store'), [
+        $response = $this->postJson(route('orders.store'), [
             'total_amount' => '0.01',
             'unit_price' => '0.01',
         ]);
@@ -66,7 +66,7 @@ final class CheckoutTest extends TestCase
         // Simulate another customer buying the remaining units.
         $product->update(['stock_quantity' => 2]);
 
-        $response = $this->postJson(route('checkout.store'));
+        $response = $this->postJson(route('orders.store'));
 
         $response->assertStatus(409);
         $this->assertStringContainsString('Only 2', $response->json('message'));
@@ -97,7 +97,7 @@ final class CheckoutTest extends TestCase
 
     public function test_checkout_requires_authentication(): void
     {
-        $this->postJson(route('checkout.store'))->assertUnauthorized();
+        $this->postJson(route('orders.store'))->assertUnauthorized();
     }
 
     public function test_checkout_with_an_empty_cart_is_rejected(): void
@@ -105,7 +105,7 @@ final class CheckoutTest extends TestCase
         $customer = User::factory()->create();
 
         $this->actingAs($customer)
-            ->postJson(route('checkout.store'))
+            ->postJson(route('orders.store'))
             ->assertStatus(422)
             ->assertJsonPath('message', 'Your cart is empty.');
     }

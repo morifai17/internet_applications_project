@@ -6,7 +6,6 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use App\Services\CartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,13 +13,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Serves both clients of the backend: requests on the web routes carry a
- * session and are signed in through it, while stateless API requests receive
- * a short-lived JWT bearer token instead.
+ * Issues, refreshes and revokes the short-lived JWT bearer tokens every
+ * client authenticates with.
  */
 final class AuthController extends Controller
 {
-    public function register(RegisterRequest $request, CartService $cart): JsonResponse
+    public function register(RegisterRequest $request): JsonResponse
     {
         $user = User::query()->create([
             'username' => $request->validated('username'),
@@ -30,11 +28,11 @@ final class AuthController extends Controller
 
         return response()->json([
             'message' => 'Account created successfully.',
-            ...$this->signIn($request, $user, $cart),
+            ...$this->signIn($user),
         ], 201);
     }
 
-    public function login(LoginRequest $request, CartService $cart): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->validated();
 
@@ -48,7 +46,7 @@ final class AuthController extends Controller
 
         return response()->json([
             'message' => 'Signed in successfully.',
-            ...$this->signIn($request, $user, $cart),
+            ...$this->signIn($user),
         ]);
     }
 
@@ -59,17 +57,12 @@ final class AuthController extends Controller
         ]);
     }
 
-    public function logout(Request $request): JsonResponse
+    /**
+     * Blacklist the current token so it cannot be used again before it expires.
+     */
+    public function logout(): JsonResponse
     {
-        if ($request->hasSession()) {
-            Auth::guard('web')->logout();
-
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-        } else {
-            // Blacklists the token so it cannot be used again before it expires.
-            Auth::guard('api')->logout();
-        }
+        Auth::guard('api')->logout();
 
         return response()->json(['message' => 'Signed out successfully.']);
     }
@@ -87,26 +80,12 @@ final class AuthController extends Controller
     }
 
     /**
-     * Start a session for web requests or issue a token for API requests.
-     *
      * @return array<string, mixed>
      */
-    private function signIn(Request $request, User $user, CartService $cart): array
+    private function signIn(User $user): array
     {
-        $payload = [];
-
-        if ($request->hasSession()) {
-            Auth::guard('web')->login($user);
-            $request->session()->regenerate();
-
-            // Keep whatever the visitor added to the cart before signing in.
-            $cart->absorbGuestCart($user);
-        } else {
-            $payload = $this->tokenPayload(Auth::guard('api')->login($user));
-        }
-
         return [
-            ...$payload,
+            ...$this->tokenPayload(Auth::guard('api')->login($user)),
             'data' => (new UserResource($user))->resolve(),
             'redirect_to' => $user->homeUrl(),
         ];

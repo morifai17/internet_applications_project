@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Tests\TestCase;
 
 final class AuthenticationTest extends TestCase
@@ -96,14 +97,18 @@ final class AuthenticationTest extends TestCase
             ->assertJsonValidationErrors('email');
     }
 
-    public function test_logout_invalidates_the_session(): void
+    public function test_logout_revokes_the_token(): void
     {
-        $customer = User::factory()->create();
+        $token = JWTAuth::fromUser(User::factory()->create());
 
-        $this->actingAs($customer)
+        $this->withToken($token)
             ->postJson(route('logout'))
             ->assertOk();
 
-        $this->assertGuest();
+        $this->app['auth']->forgetGuards();
+
+        $this->withToken($token)
+            ->getJson(route('me'))
+            ->assertUnauthorized();
     }
 }
