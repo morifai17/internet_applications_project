@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Enums\UserRole;
-use App\Models\User;
+use App\Modules\Users\Enums\UserRole;
+use App\Modules\Users\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 

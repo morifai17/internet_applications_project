@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\Cart;
-use App\Models\CartItem;
-use App\Models\Product;
+use App\Modules\Orders\Models\Cart;
+use App\Modules\Orders\Models\CartItem;
+use App\Modules\Products\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -12,6 +12,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class CartItemFactory extends Factory
 {
+    /**
+     * @var class-string<CartItem>
+     */
+    protected $model = CartItem::class;
+
     /**
      * @return array<string, mixed>
      */

@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Enums\OrderStatus;
-use App\Models\Cart;
-use App\Models\CartItem;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\User;
+use App\Modules\Orders\Enums\OrderStatus;
+use App\Modules\Orders\Models\Cart;
+use App\Modules\Orders\Models\CartItem;
+use App\Modules\Orders\Models\Order;
+use App\Modules\Products\Models\Product;
+use App\Modules\Users\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Tests\TestCase;
