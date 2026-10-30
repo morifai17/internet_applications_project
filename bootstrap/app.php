@@ -1,10 +1,9 @@
 <?php
 
-use App\Exceptions\EmptyCartException;
-use App\Exceptions\InsufficientStockException;
-use App\Exceptions\InvalidOrderTransitionException;
-use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\SecurityHeaders;
+use App\Modules\Orders\Exceptions\EmptyCartException;
+use App\Modules\Orders\Exceptions\InvalidOrderTransitionException;
+use App\Modules\Products\Exceptions\InsufficientStockException;
 use App\Support\ApiError;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,17 +17,13 @@ use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
+    // API routes are registered by each module's service provider under
+    // /api/v1 (see App\Modules\ModuleServiceProvider).
     ->withRouting(
-        api: __DIR__.'/../routes/api.php',
-        apiPrefix: 'api/v1',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias([
-            'admin' => EnsureUserIsAdmin::class,
-        ]);
-
         $middleware->append(SecurityHeaders::class);
         $middleware->throttleApi();
     })

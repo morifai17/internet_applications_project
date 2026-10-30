@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Category;
+use App\Modules\Products\Models\Category;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -11,6 +11,11 @@ use Illuminate\Support\Str;
  */
 class CategoryFactory extends Factory
 {
+    /**
+     * @var class-string<Category>
+     */
+    protected $model = Category::class;
+
     /**
      * @return array<string, mixed>
      */

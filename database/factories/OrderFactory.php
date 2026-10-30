@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Enums\OrderStatus;
-use App\Models\Order;
-use App\Models\User;
+use App\Modules\Orders\Enums\OrderStatus;
+use App\Modules\Orders\Models\Order;
+use App\Modules\Users\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -12,6 +12,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class OrderFactory extends Factory
 {
+    /**
+     * @var class-string<Order>
+     */
+    protected $model = Order::class;
+
     /**
      * @return array<string, mixed>
      */
