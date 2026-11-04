@@ -1,7 +1,8 @@
 services:
   app:
+    image: internet-applications-project-app:latest
     build:
-      context: .
+      context: ./laravel-app
       target: app
     restart: unless-stopped
     environment:
@@ -23,15 +24,20 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      INVENTORY_GRPC_ADDRESS: inventory:50051
+      INVENTORY_TIMEOUT_MS: ${INVENTORY_TIMEOUT_MS:-2000}
     volumes:
       - storage:/var/www/html/storage
     depends_on:
       db:
         condition: service_healthy
+      inventory:
+        condition: service_healthy
 
   web:
+    image: internet-applications-project-web:latest
     build:
-      context: .
+      context: ./laravel-app
       target: web
     restart: unless-stopped
     ports:
@@ -56,6 +62,43 @@ services:
       timeout: 5s
       retries: 10
 
+  inventory:
+    image: internet-applications-project-inventory:latest
+    build:
+      context: ./nodejs-inventory
+      additional_contexts:
+        proto: ./proto
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://inventory:${INVENTORY_DB_PASSWORD:-inventory}@inventory-db:5432/inventory
+      GRPC_PORT: 50051
+      INVENTORY_ARTIFICIAL_DELAY_MS: ${INVENTORY_ARTIFICIAL_DELAY_MS:-0}
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "src/healthcheck.js"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  inventory-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: inventory
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: ${INVENTORY_DB_PASSWORD:-inventory}
+    volumes:
+      - inventory-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory -d inventory"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   storage:
   pgdata:
+  inventory-pgdata:
